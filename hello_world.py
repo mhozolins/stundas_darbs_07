@@ -1,1 +1,1 @@
-print("Hello from DEV")
+print("Hotfix version")
