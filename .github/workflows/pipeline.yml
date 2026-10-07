@@ -1,0 +1,47 @@
+name: Git Flow CI CD
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - feature
+      - release
+      - hotfix
+
+jobs:
+
+  ci:
+    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feature' || github.ref == 'refs/heads/hotfix'
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run CI test
+        run: python hello_world.py
+
+
+  test:
+    if: github.ref == 'refs/heads/release'
+    runs-on: [self-hosted, test]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run on TEST
+        run: python hello_world.py
+
+
+  prod:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, prod]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run on PROD
+        run: python hello_world.py
