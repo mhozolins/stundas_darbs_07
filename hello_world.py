@@ -1,1 +1,1 @@
-print("Feature branch")
+print("Hotfix version")
