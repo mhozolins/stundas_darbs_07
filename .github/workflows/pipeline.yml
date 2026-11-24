@@ -1,47 +1,95 @@
 name: Git Flow CI CD
 
 on:
+  pull_request:
+    branches: [dev, release, main]
+
   push:
-    branches:
-      - main
-      - dev
-      - feature
-      - release
-      - hotfix
+    branches: [feature, dev, release, main, hotfix]
 
 jobs:
 
   ci:
-    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feature' || github.ref == 'refs/heads/hotfix'
-    runs-on: self-hosted
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run CI test
-        run: python hello_world.py
-
-
-  test:
-    if: github.ref == 'refs/heads/release'
+    if: github.ref_name == 'feature' || github.ref_name == 'dev' || github.ref_name == 'hotfix' || github.base_ref == 'dev'
     runs-on: [self-hosted, test]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Run on TEST
-        run: python hello_world.py
+      - name: Install flake8
+        run: python -m pip install flake8
 
+      - name: Unit test
+        run: python test_unit.py
+
+      - name: Lint test
+        run: python -m flake8 hello_world.py
+
+      - name: Integration test
+        if: github.event_name == 'push' && github.ref_name == 'dev'
+        run: python test_integration.py
+
+  test:
+    if: github.ref_name == 'release' || github.base_ref == 'release'
+    runs-on: [self-hosted, test]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install flake8
+        run: python -m pip install flake8
+
+      - name: Unit test
+        run: python test_unit.py
+
+      - name: Lint test
+        run: python -m flake8 hello_world.py
+
+      - name: Integration test
+        run: python test_integration.py
+
+      - name: Regression test
+        run: python test_regression.py
+
+      - name: Registration test
+        if: github.event_name == 'push'
+        run: python test_registration.py
+
+      - name: Stress test
+        if: github.event_name == 'push'
+        run: python test_stress.py
+
+  production-pr:
+    if: github.base_ref == 'main'
+    runs-on: [self-hosted, test]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: python -m compileall hello_world.py
+
+      - name: Smoke test
+        run: python test_smoke.py
+
+      - name: Regression test
+        run: python test_regression.py
 
   prod:
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref_name == 'main'
     runs-on: [self-hosted, prod]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Run on PROD
-        run: python hello_world.py
+      - name: Build
+        run: python -m compileall hello_world.py
+
+      - name: Deploy
+        run: |
+          New-Item -ItemType Directory -Force "$HOME\production"
+          Copy-Item hello_world.py "$HOME\production" -Force
+          Copy-Item test_smoke.py "$HOME\production" -Force
+
+      - name: Smoke test
+        run: python "$HOME\production\test_smoke.py"
